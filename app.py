@@ -1,5 +1,11 @@
-from flask import Flask, render_template, redirect, current_app
-
+from flask import (
+    current_app,
+    Flask,
+    redirect,
+    render_template,
+    request
+)
+import urllib.parse
 from datetime import datetime, time
 from dataclasses import dataclass
 from typing import Callable, Any
@@ -115,6 +121,23 @@ def redirect_to_schoolmail():
 @app.route("/school/schooldrive")
 def redirect_to_schooldrive():
     return redirect("https://drive.google.com/drive/recent", code=302)
+
+@app.route("/school/open_in_profile")
+def open_in_school_profile():
+    target_url = request.args.get('url')
+    def is_url(url_string):
+        try:
+            result = urllib.parse.urlparse(url_string)
+            return all([result.scheme, result.netloc]) 
+        except ValueError:
+            return False
+
+    if target_url and is_url(target_url):
+        return redirect(target_url, code=302)
+    elif target_url:
+        return redirect("https://google.com/search?" + urllib.parse.urlencode({"q": target_url}), code=302)
+
+    return "URL not specified"
 
 if __name__ == "__main__":
     app.run(
