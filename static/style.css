@@ -1,0 +1,31 @@
+:root {
+  color-scheme: light dark;
+  --bg-color: light-dark(#ffffff, #1a1a1a);
+  --text-color: light-dark(#333333, #f0f0f0);
+}
+
+#main {
+  /* Box properties */
+  margin: 2rem auto; 
+  padding: 2rem;     
+  width: 90%;
+  max-width: 800px;
+  
+  /* Remove fixed/min heights to prevent forced scrollbars */
+  min-height: auto; 
+
+  /* Visuals */
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  
+  /* Typography */
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Monaco, Consolas, 'Courier New', monospace;
+  line-height: 1.6;
+}
+
+/* Ensure the html element doesn't force a scrollbar if body is small */
+html {
+  height: 100%;
+  overflow-y: auto;
+}
