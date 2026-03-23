@@ -86,6 +86,18 @@ body {
   min-height: 1.25rem;
 }
 
+.calendar-event-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.calendar-event-main {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .calendar-event-time {
   font-size: 0.72rem;
   color: var(--bs-secondary-color);
@@ -97,6 +109,22 @@ body {
   line-height: 1.2;
   font-weight: 500;
   margin-top: 0.15rem;
+}
+
+.calendar-event-tags-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  flex: 0 0 auto;
+}
+
+.calendar-event-tags-right .badge {
+  font-size: 0.64rem;
+  max-width: 9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .calendar-now-line {

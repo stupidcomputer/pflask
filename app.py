@@ -6,7 +6,7 @@ from flask import (
     request
 )
 import urllib.parse
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta
 from dataclasses import dataclass
 from typing import Callable, Any
 import json
@@ -105,25 +105,26 @@ def current_time_bucket(current_time: datetime = datetime.now()):
 name = "Ryan"
 
 
+def parse_iso_day(value: str | None) -> date | None:
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
 def build_day_timeline(events: list[dict]) -> tuple[list[dict], int, int, int, int]:
     """Convert timed events into positioned blocks for a day-view timeline."""
-    if not events:
-        start_hour = 6
-        end_hour = 22
-        total_minutes = (end_hour - start_hour) * 60
-        pixels_per_minute = 2
-        total_height_px = total_minutes * pixels_per_minute
-        return [], start_hour, end_hour, total_height_px, pixels_per_minute
-
-    min_hour = min(event["start"].hour for event in events)
-    max_hour = max(event["end"].hour + (1 if event["end"].minute > 0 else 0) for event in events)
-
-    start_hour = max(0, min(6, min_hour))
-    end_hour = min(24, max(22, max_hour))
-    total_minutes = max(60, (end_hour - start_hour) * 60)
+    start_hour = 0
+    end_hour = 24
+    total_minutes = (end_hour - start_hour) * 60
     pixels_per_minute = 2
     min_render_minutes = 20
     total_height_px = total_minutes * pixels_per_minute
+
+    if not events:
+        return [], start_hour, end_hour, total_height_px, pixels_per_minute
 
     enriched = []
     for index, event in enumerate(events):
@@ -196,7 +197,7 @@ def build_day_timeline(events: list[dict]) -> tuple[list[dict], int, int, int, i
 
         blocks.append({
             **event,
-            "time_label": f"{event['start'].strftime('%-I:%M %p')} – {event['end'].strftime('%-I:%M %p')}",
+            "time_label": f"{event['start'].strftime('%H:%M')} – {event['end'].strftime('%H:%M')}",
             "top_px": start_minutes * pixels_per_minute,
             "height_px": duration * pixels_per_minute,
             "left_pct": (positioned["column"] / positioned["total_columns"]) * 100,
@@ -205,34 +206,58 @@ def build_day_timeline(events: list[dict]) -> tuple[list[dict], int, int, int, i
 
     return blocks, start_hour, end_hour, total_height_px, pixels_per_minute
 
-@app.route("/mainpage")
-@app.route("/")
-def mainpage():
-    today = date.today()
-    timed_events = org_store.timed_events_for_day(today)
+
+def build_schedule_context(target_day: date) -> dict:
+    timed_events = org_store.timed_events_for_day(target_day)
     timeline_events, timeline_start_hour, timeline_end_hour, timeline_height_px, pixels_per_minute = build_day_timeline(timed_events)
 
     now = datetime.now()
-    now_minutes = (now.hour - timeline_start_hour) * 60 + now.minute
     timeline_total_minutes = max(1, (timeline_end_hour - timeline_start_hour) * 60)
-    now_visible = 0 <= now_minutes <= timeline_total_minutes
+    now_minutes = (now.hour - timeline_start_hour) * 60 + now.minute
+    now_visible = (target_day == date.today()) and (0 <= now_minutes <= timeline_total_minutes)
     now_line_top_px = max(0, min(timeline_height_px, now_minutes * pixels_per_minute))
+
+    return {
+        "target_day": target_day,
+        "timed_events": timed_events,
+        "timeline_events": timeline_events,
+        "timeline_start_hour": timeline_start_hour,
+        "timeline_end_hour": timeline_end_hour,
+        "timeline_hour_lines": (timeline_end_hour - timeline_start_hour + 1),
+        "timeline_height_px": timeline_height_px,
+        "timeline_pixels_per_minute": pixels_per_minute,
+        "now_visible": now_visible,
+        "now_line_top_px": now_line_top_px,
+        "now_time_label": now.strftime("%H:%M"),
+    }
+
+@app.route("/mainpage")
+@app.route("/")
+def mainpage():
+    schedule_context = build_schedule_context(date.today())
 
     return render_template("mainpage.html",
         name=name,
         time_bucket=current_time_bucket(),
         title="Homepage",
-        today=today,
-        timed_events=timed_events,
-        timeline_events=timeline_events,
-        timeline_start_hour=timeline_start_hour,
-        timeline_end_hour=timeline_end_hour,
-        timeline_hour_lines=(timeline_end_hour - timeline_start_hour + 1),
-        timeline_height_px=timeline_height_px,
-        timeline_pixels_per_minute=pixels_per_minute,
-        now_visible=now_visible,
-        now_line_top_px=now_line_top_px,
-        now_time_label=now.strftime("%H:%M"),
+        **schedule_context,
+    )
+
+
+@app.route("/schedule")
+@app.route("/schedule/<day_iso>")
+def schedule(day_iso: str | None = None):
+    query_day = parse_iso_day(request.args.get("day"))
+    path_day = parse_iso_day(day_iso)
+    target_day = query_day or path_day or date.today()
+
+    schedule_context = build_schedule_context(target_day)
+    return render_template(
+        "schedule.html",
+        title="Schedule",
+        prev_day=(target_day - timedelta(days=1)).isoformat(),
+        next_day=(target_day + timedelta(days=1)).isoformat(),
+        **schedule_context,
     )
 
 @app.route("/style.css")

@@ -1,0 +1,90 @@
+<div class="col-12 col-xl-10">
+  <div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span class="fw-semibold">{{ schedule_heading }}</span>
+      <span class="text-body-secondary small">{{ timed_events|length }} events</span>
+    </div>
+
+    {% if not timeline_events %}
+      <div class="card-body">
+        <p class="text-body-secondary mb-0">No timed events for this day.</p>
+      </div>
+    {% else %}
+      <div class="card-body">
+        <div class="day-calendar-scroll">
+          <div class="day-calendar" data-height-px="{{ timeline_height_px }}">
+            <div class="day-calendar-hours">
+              {% for hour in range(timeline_start_hour, timeline_end_hour) %}
+                <div class="day-hour-label" data-top-px="{{ (hour - timeline_start_hour) * 60 * timeline_pixels_per_minute }}">
+                  {{ "%02d:00"|format(hour) }}
+                </div>
+              {% endfor %}
+            </div>
+
+            <div class="day-calendar-grid" style="--hour-lines: {{ timeline_hour_lines }};">
+              {% for hour in range(timeline_start_hour, timeline_end_hour + 1) %}
+                <div class="day-grid-line"></div>
+              {% endfor %}
+
+              {% if now_visible %}
+                <div class="calendar-now-line" data-top-px="{{ now_line_top_px }}">
+                  <span class="calendar-now-label">{{ now_time_label }}</span>
+                </div>
+              {% endif %}
+
+              {% for event in timeline_events %}
+                <article class="calendar-event shadow-sm"
+                         data-top-px="{{ event.top_px }}"
+                         data-height-px="{{ event.height_px }}"
+                         data-left-pct="{{ '%.4f'|format(event.left_pct) }}"
+                         data-width-pct="{{ '%.4f'|format(event.width_pct) }}">
+                  <div class="calendar-event-body">
+                    <div class="calendar-event-main">
+                      <div class="calendar-event-time">{{ event.time_label }}</div>
+                      <div class="calendar-event-title">{{ event.title }}</div>
+                    </div>
+                    {% if event.tags %}
+                      <div class="calendar-event-tags-right">
+                        {% for tag in event.tags %}
+                          <span class="badge text-bg-light border">{{ tag }}</span>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </article>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.day-calendar').forEach((element) => {
+    const height = Number(element.dataset.heightPx || 600);
+    element.style.height = `${height}px`;
+  });
+
+  document.querySelectorAll('.day-hour-label').forEach((element) => {
+    const top = Number(element.dataset.topPx || 0);
+    element.style.top = `${top}px`;
+  });
+
+  document.querySelectorAll('.calendar-now-line').forEach((element) => {
+    const top = Number(element.dataset.topPx || 0);
+    element.style.top = `${top}px`;
+  });
+
+  document.querySelectorAll('.calendar-event').forEach((element) => {
+    const top = Number(element.dataset.topPx || 0);
+    const height = Number(element.dataset.heightPx || 20);
+    const left = Number(element.dataset.leftPct || 0);
+    const width = Number(element.dataset.widthPct || 100);
+    element.style.top = `${top}px`;
+    element.style.height = `${height}px`;
+    element.style.left = `calc(${left}% + 0.25rem)`;
+    element.style.width = `calc(${width}% - 0.5rem)`;
+  });
+</script>
