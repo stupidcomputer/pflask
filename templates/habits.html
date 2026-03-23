@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row g-3 justify-content-center">
+  <div class="col-12 col-xl-10">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h1 class="h3 mb-1">Habits</h1>
+        <p class="text-body-secondary mb-0">Activity over the past year, based on state-change history.</p>
+      </div>
+    </div>
+  </div>
+
+  {% if not habit_grids %}
+    <div class="col-12 col-xl-10">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <p class="text-body-secondary mb-0">No tasks tagged <code>:habits:</code> found.</p>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  {% for habit in habit_grids %}
+    <div class="col-12 col-xl-10">
+      <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div>
+            <span class="fw-semibold">{{ habit.title }}</span>
+            {% if habit.task.todo %}
+              <span class="badge text-bg-secondary ms-2">{{ habit.task.todo }}</span>
+            {% endif %}
+            {% for tag in habit.task.tags if tag != "habits" %}
+              <span class="badge text-bg-light border ms-1">{{ tag }}</span>
+            {% endfor %}
+          </div>
+          <div class="d-flex gap-3 text-body-secondary small">
+            <span><strong class="text-body">{{ habit.recent_30 }}</strong> in last 30 days</span>
+            <span><strong class="text-body">{{ habit.total_completions }}</strong> total</span>
+          </div>
+        </div>
+
+        <div class="card-body pb-2">
+          <div class="habit-graph-wrapper">
+            <!-- Month label row -->
+            <div class="habit-month-row">
+              <div class="habit-day-labels-spacer"></div>
+              <div class="habit-months">
+                {% for lbl in habit.month_labels %}
+                  <div class="habit-month-label" style="--week-index: {{ lbl.week_index }};">{{ lbl.label }}</div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- Day-of-week labels + grid -->
+            <div class="habit-grid-row">
+              <div class="habit-day-labels">
+                <div class="habit-day-label">Mon</div>
+                <div class="habit-day-label"></div>
+                <div class="habit-day-label">Wed</div>
+                <div class="habit-day-label"></div>
+                <div class="habit-day-label">Fri</div>
+                <div class="habit-day-label"></div>
+                <div class="habit-day-label"></div>
+              </div>
+
+              <div class="habit-grid">
+                {% for week in habit.weeks %}
+                  <div class="habit-week">
+                    {% for cell in week %}
+                      {% if cell is none %}
+                        <div class="habit-cell habit-cell--empty"></div>
+                      {% elif cell.done %}
+                        <div class="habit-cell habit-cell--done" title="{{ cell.label }}"></div>
+                      {% else %}
+                        <div class="habit-cell habit-cell--miss" title="{{ cell.label }}"></div>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

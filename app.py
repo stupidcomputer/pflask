@@ -287,6 +287,73 @@ def schedule(day_iso: str | None = None):
         **schedule_context,
     )
 
+@app.route("/habits")
+def habits():
+    today = date.today()
+    # Build a 52-week window ending today (364 days back + today = 365 days)
+    window_days = 365
+    window_start = today - timedelta(days=window_days - 1)
+
+    raw_habits = org_store.habit_tracker_data()
+    habit_grids = []
+    for habit in raw_habits:
+        completion_set = set(habit["completions"])
+        # Build week columns: each column is 7 days (Mon..Sun).
+        # Align window_start to the Monday of its week so the grid is neat.
+        grid_start = window_start - timedelta(days=window_start.weekday())  # previous Monday
+        weeks: list[list[dict]] = []
+        cursor = grid_start
+        while cursor <= today:
+            week = []
+            for _ in range(7):
+                if cursor < window_start or cursor > today:
+                    week.append(None)
+                else:
+                    week.append({
+                        "date": cursor,
+                        "done": cursor in completion_set,
+                        "label": cursor.strftime("%Y-%m-%d"),
+                    })
+                cursor += timedelta(days=1)
+            weeks.append(week)
+
+        # Month labels: one label per week column for the first week that enters a new month
+        month_labels: list[dict] = []
+        prev_month = None
+        for w_idx, week in enumerate(weeks):
+            first_real = next((cell for cell in week if cell is not None), None)
+            if first_real is None:
+                continue
+            m = first_real["date"].month
+            if m != prev_month:
+                month_labels.append({
+                    "week_index": w_idx,
+                    "label": first_real["date"].strftime("%b"),
+                })
+                prev_month = m
+
+        total = len(habit["completions"])
+        recent_30 = sum(
+            1 for d in habit["completions"]
+            if (today - d).days <= 30
+        )
+        habit_grids.append({
+            "title": habit["title"],
+            "task": habit["task"],
+            "weeks": weeks,
+            "month_labels": month_labels,
+            "total_completions": total,
+            "recent_30": recent_30,
+        })
+
+    return render_template(
+        "habits.html",
+        title="Habits",
+        habit_grids=habit_grids,
+        today=today,
+    )
+
+
 @app.route("/style.css")
 def static_style_css():
     return current_app.send_static_file("style.css")

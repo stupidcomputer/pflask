@@ -199,6 +199,19 @@ def _node_to_task(node) -> Optional[OrgTask]:
     if not resolved_todo and not has_date:
         return None
 
+    # Collect state-change history from both the regex (regular tasks) and
+    # orgparse's repeated_tasks list (habit/repeating tasks stored in LOGBOOK).
+    history = _parse_state_changes(node.body)
+    seen_whens = {entry["when"] for entry in history}
+    for rt in node.repeated_tasks:
+        try:
+            when = rt.start if isinstance(rt.start, datetime) else datetime.combine(rt.start, dtime(0, 0))
+        except Exception:
+            continue
+        if when not in seen_whens:
+            history.append({"to": rt.after, "from": rt.before, "when": when})
+            seen_whens.add(when)
+
     return OrgTask(
         heading=cleaned_heading if inferred_todo and not node.todo else node.heading,
         todo=resolved_todo,
@@ -206,7 +219,7 @@ def _node_to_task(node) -> Optional[OrgTask]:
         scheduled=scheduled,
         deadline=deadline,
         properties=dict(node.properties),
-        state_history=_parse_state_changes(node.body),
+        state_history=history,
         body_dates=all_active_dates,
     )
 
@@ -272,7 +285,7 @@ class OrgStore:
         return tasks
 
     def pending(self) -> list[OrgTask]:
-        return [t for t in self.all_tasks() if not t.is_done]
+        return [t for t in self.all_tasks() if not t.is_done and "habits" not in t.tags]
 
     def by_date(self) -> dict[date, list[OrgTask]]:
         result: dict[date, list[OrgTask]] = {}
@@ -292,7 +305,7 @@ class OrgStore:
                 seen.add(tid)
                 entries.append({"task": task, "label": label, "kind": kind})
 
-        all_tasks = self.all_tasks()
+        all_tasks = [t for t in self.all_tasks() if "habits" not in t.tags]
 
         for t in all_tasks:
             if t.scheduled_on(day):
@@ -310,6 +323,37 @@ class OrgStore:
 
         return entries
 
+    def habit_tracker_data(self) -> list[dict]:
+        """
+        Return one entry per task tagged 'habits', with its full completion history.
+        A "completion" is any state-history entry whose `to` state is a terminal state.
+        Returns list of:
+            {
+                "task":        OrgTask,
+                "title":       str,           # cleaned heading
+                "completions": [date, ...],   # sorted ascending
+            }
+        """
+        self.refresh()
+        results = []
+        for task in self.all_tasks():
+            if "habits" not in task.tags:
+                continue
+            completions = sorted(
+                {
+                    change["when"].date()
+                    for change in task.state_history
+                    if _normalize_todo(change["to"]) in TERMINAL_TODO_STATES
+                }
+            )
+            results.append({
+                "task": task,
+                "title": _strip_active_timestamps(task.heading),
+                "completions": completions,
+            })
+        results.sort(key=lambda h: h["title"].lower())
+        return results
+
     def timed_events_for_day(self, day: date) -> list[dict]:
         """Return events with explicit time for one day, sorted by start time."""
         self.refresh()
@@ -318,6 +362,8 @@ class OrgStore:
 
         for task in self.all_tasks():
             if task.is_done:
+                continue
+            if "habits" in task.tags:
                 continue
 
             text_sources = [task.heading]

@@ -147,3 +147,97 @@ body {
   border-radius: 999px;
   padding: 0.18rem 0.42rem;
 }
+
+/* ── Habit tracker contribution graph ──────────────────────────── */
+
+.habit-graph-wrapper {
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.habit-month-row {
+  display: flex;
+  align-items: flex-end;
+  margin-bottom: 0.2rem;
+}
+
+.habit-day-labels-spacer {
+  width: 2.25rem;
+  flex-shrink: 0;
+}
+
+.habit-months {
+  position: relative;
+  flex: 1 1 auto;
+  height: 1.1rem;
+}
+
+.habit-month-label {
+  position: absolute;
+  left: calc(var(--week-index) * (var(--habit-cell-size, 13px) + var(--habit-cell-gap, 3px)));
+  font-size: 0.72rem;
+  color: var(--bs-secondary-color);
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.habit-grid-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.habit-day-labels {
+  display: flex;
+  flex-direction: column;
+  gap: var(--habit-cell-gap, 3px);
+  width: 2.25rem;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+
+.habit-day-label {
+  height: var(--habit-cell-size, 13px);
+  font-size: 0.65rem;
+  color: var(--bs-secondary-color);
+  line-height: var(--habit-cell-size, 13px);
+  text-align: right;
+  padding-right: 0.3rem;
+  white-space: nowrap;
+}
+
+.habit-grid {
+  display: flex;
+  flex-direction: row;
+  gap: var(--habit-cell-gap, 3px);
+}
+
+.habit-week {
+  display: flex;
+  flex-direction: column;
+  gap: var(--habit-cell-gap, 3px);
+}
+
+.habit-cell {
+  width: var(--habit-cell-size, 13px);
+  height: var(--habit-cell-size, 13px);
+  border-radius: 2px;
+}
+
+.habit-cell--empty {
+  background: transparent;
+}
+
+.habit-cell--miss {
+  background: var(--bs-border-color);
+}
+
+.habit-cell--done {
+  background: #2da44e;
+}
+
+@media (prefers-color-scheme: dark) {
+  .habit-cell--done {
+    background: #3fb950;
+  }
+}
