@@ -365,16 +365,6 @@ def create_org_blueprint(store: OrgStore) -> Blueprint:
             today=today,
         )
 
-    @bp.route("/tasks")
-    def tasks():
-        all_tasks = store.pending()
-        return render_template(
-            "org_tasks.html",
-            title="Org Tasks",
-            tasks=all_tasks,
-            today=date.today(),
-        )
-
     return bp
 
 

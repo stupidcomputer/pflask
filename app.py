@@ -207,6 +207,32 @@ def build_day_timeline(events: list[dict]) -> tuple[list[dict], int, int, int, i
     return blocks, start_hour, end_hour, total_height_px, pixels_per_minute
 
 
+def build_day_todo_widget(target_day: date) -> dict:
+    """Build TODO-only entries for a specific day, including overdue/deadline labels."""
+    raw_entries = org_store.agenda_for_day(target_day)
+    todo_entries = [entry for entry in raw_entries if entry["task"].todo]
+
+    kind_order = {
+        "scheduled-overdue": 0,
+        "deadline-overdue": 1,
+        "scheduled": 2,
+        "deadline": 3,
+        "appointment": 4,
+    }
+
+    todo_entries.sort(
+        key=lambda entry: (
+            kind_order.get(entry.get("kind"), 99),
+            entry["task"].heading.lower(),
+        )
+    )
+
+    return {
+        "todo_widget_entries": todo_entries,
+        "todo_widget_count": len(todo_entries),
+    }
+
+
 def build_schedule_context(target_day: date) -> dict:
     timed_events = org_store.timed_events_for_day(target_day)
     timeline_events, timeline_start_hour, timeline_end_hour, timeline_height_px, pixels_per_minute = build_day_timeline(timed_events)
@@ -229,6 +255,7 @@ def build_schedule_context(target_day: date) -> dict:
         "now_visible": now_visible,
         "now_line_top_px": now_line_top_px,
         "now_time_label": now.strftime("%H:%M"),
+        **build_day_todo_widget(target_day),
     }
 
 @app.route("/mainpage")

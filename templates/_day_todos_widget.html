@@ -1,0 +1,38 @@
+<div class="col-12 col-xl-10">
+  <div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span class="fw-semibold">{{ todo_widget_heading }}</span>
+      <span class="text-body-secondary small">{{ todo_widget_count }} items</span>
+    </div>
+
+    {% if not todo_widget_entries %}
+      <div class="card-body">
+        <p class="text-body-secondary mb-0">No TODO items for this day.</p>
+      </div>
+    {% else %}
+      <ul class="list-group list-group-flush">
+        {% for entry in todo_widget_entries %}
+          {% set task = entry.task %}
+          <li class="list-group-item org-entry--{{ entry.kind }}">
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+              <span class="badge rounded-pill text-bg-secondary">{{ task.todo }}</span>
+              <span class="badge rounded-pill text-bg-light border">{{ entry.label }}</span>
+              <span class="fw-medium">{{ task.heading }}</span>
+              {% if task.tags %}
+                <span class="d-flex flex-wrap gap-1 ms-auto">
+                  {% for tag in task.tags %}
+                    <span class="badge text-bg-light border">{{ tag }}</span>
+                  {% endfor %}
+                </span>
+              {% endif %}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    <div class="card-footer bg-body-tertiary d-flex justify-content-end">
+      <a class="btn btn-sm btn-outline-primary" href="/schedule/{{ target_day.isoformat() }}">Open day schedule</a>
+    </div>
+  </div>
+</div>
