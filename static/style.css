@@ -29,3 +29,93 @@ body {
 .org-entry--appointment {
   border-left: 0.25rem solid var(--bs-success);
 }
+
+.day-calendar {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  gap: 0.75rem;
+  min-height: 40rem;
+}
+
+.day-calendar-scroll {
+  max-height: 72vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.day-calendar-hours {
+  position: relative;
+  color: var(--bs-secondary-color);
+  font-size: 0.8rem;
+}
+
+.day-hour-label {
+  position: absolute;
+  right: 0;
+  transform: translateY(-0.5rem);
+  text-align: right;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.day-calendar-grid {
+  position: relative;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 0.5rem;
+  background-color: var(--bs-body-bg);
+  overflow: hidden;
+}
+
+.day-grid-line {
+  height: calc(100% / (var(--hour-lines) - 1));
+  border-top: 1px solid var(--bs-border-color-translucent);
+}
+
+.day-grid-line:first-child {
+  border-top: 0;
+}
+
+.calendar-event {
+  position: absolute;
+  left: 0.5rem;
+  border-left: 0.3rem solid var(--bs-primary);
+  background: color-mix(in srgb, var(--bs-primary-bg-subtle) 75%, transparent);
+  border-radius: 0.4rem;
+  padding: 0.35rem 0.45rem;
+  overflow: hidden;
+  min-height: 1.25rem;
+}
+
+.calendar-event-time {
+  font-size: 0.72rem;
+  color: var(--bs-secondary-color);
+  line-height: 1.1;
+}
+
+.calendar-event-title {
+  font-size: 0.86rem;
+  line-height: 1.2;
+  font-weight: 500;
+  margin-top: 0.15rem;
+}
+
+.calendar-now-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 2px solid var(--bs-danger);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.calendar-now-label {
+  position: absolute;
+  top: -0.85rem;
+  left: 0.35rem;
+  background: var(--bs-danger);
+  color: #fff;
+  font-size: 0.68rem;
+  line-height: 1;
+  border-radius: 999px;
+  padding: 0.18rem 0.42rem;
+}

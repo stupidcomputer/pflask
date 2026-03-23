@@ -6,7 +6,7 @@ from flask import (
     request
 )
 import urllib.parse
-from datetime import datetime, time
+from datetime import datetime, date, time
 from dataclasses import dataclass
 from typing import Callable, Any
 import json
@@ -15,8 +15,7 @@ from org import attach_org
 
 app = Flask(__name__)
 
-# List your org files here
-attach_org(app, [
+ORG_FILES = [
     "/home/usr/org/main.org",
     "/home/usr/org/body.org",
     "/home/usr/org/inbox.org",
@@ -25,7 +24,9 @@ attach_org(app, [
     "/home/usr/org/tfb.org",
     "/home/usr/org/school-calendar.org",
     "/home/usr/org/phone-inbox.org",
-])
+]
+
+org_store = attach_org(app, ORG_FILES)
 
 @dataclass
 class CachedSource:
@@ -103,13 +104,135 @@ def current_time_bucket(current_time: datetime = datetime.now()):
 
 name = "Ryan"
 
+
+def build_day_timeline(events: list[dict]) -> tuple[list[dict], int, int, int, int]:
+    """Convert timed events into positioned blocks for a day-view timeline."""
+    if not events:
+        start_hour = 6
+        end_hour = 22
+        total_minutes = (end_hour - start_hour) * 60
+        pixels_per_minute = 2
+        total_height_px = total_minutes * pixels_per_minute
+        return [], start_hour, end_hour, total_height_px, pixels_per_minute
+
+    min_hour = min(event["start"].hour for event in events)
+    max_hour = max(event["end"].hour + (1 if event["end"].minute > 0 else 0) for event in events)
+
+    start_hour = max(0, min(6, min_hour))
+    end_hour = min(24, max(22, max_hour))
+    total_minutes = max(60, (end_hour - start_hour) * 60)
+    pixels_per_minute = 2
+    min_render_minutes = 20
+    total_height_px = total_minutes * pixels_per_minute
+
+    enriched = []
+    for index, event in enumerate(events):
+        start_minutes = (event["start"].hour - start_hour) * 60 + event["start"].minute
+        end_minutes = (event["end"].hour - start_hour) * 60 + event["end"].minute
+        if end_minutes <= start_minutes:
+            end_minutes = start_minutes + 30
+        render_end_minutes = start_minutes + max(min_render_minutes, end_minutes - start_minutes)
+
+        enriched.append({
+            "index": index,
+            "start_minutes": start_minutes,
+            "end_minutes": end_minutes,
+            "render_end_minutes": render_end_minutes,
+            "column": 0,
+            "total_columns": 1,
+        })
+
+    # Build connected overlap groups first.
+    enriched.sort(key=lambda event: (event["start_minutes"], event["end_minutes"]))
+    groups: list[list[dict]] = []
+    current_group: list[dict] = []
+    current_group_end = -1
+
+    for event in enriched:
+        if not current_group:
+            current_group = [event]
+            current_group_end = event["render_end_minutes"]
+            continue
+
+        if event["start_minutes"] < current_group_end:
+            current_group.append(event)
+            current_group_end = max(current_group_end, event["render_end_minutes"])
+        else:
+            groups.append(current_group)
+            current_group = [event]
+            current_group_end = event["render_end_minutes"]
+
+    if current_group:
+        groups.append(current_group)
+
+    # Assign columns inside each overlap group.
+    for group in groups:
+        active: list[dict] = []
+        max_columns = 0
+
+        for event in sorted(group, key=lambda item: (item["start_minutes"], item["end_minutes"])):
+            active = [item for item in active if item["render_end_minutes"] > event["start_minutes"]]
+            used_columns = {item["column"] for item in active}
+
+            column = 0
+            while column in used_columns:
+                column += 1
+
+            event["column"] = column
+            active.append(event)
+            max_columns = max(max_columns, column + 1)
+
+        for event in group:
+            event["total_columns"] = max_columns
+
+    enriched_by_index = {event["index"]: event for event in enriched}
+
+    blocks = []
+    for index, event in enumerate(events):
+        positioned = enriched_by_index[index]
+        start_minutes = positioned["start_minutes"]
+        end_minutes = positioned["end_minutes"]
+        duration = max(min_render_minutes, end_minutes - start_minutes)
+
+        blocks.append({
+            **event,
+            "time_label": f"{event['start'].strftime('%-I:%M %p')} – {event['end'].strftime('%-I:%M %p')}",
+            "top_px": start_minutes * pixels_per_minute,
+            "height_px": duration * pixels_per_minute,
+            "left_pct": (positioned["column"] / positioned["total_columns"]) * 100,
+            "width_pct": 100 / positioned["total_columns"],
+        })
+
+    return blocks, start_hour, end_hour, total_height_px, pixels_per_minute
+
 @app.route("/mainpage")
 @app.route("/")
 def mainpage():
+    today = date.today()
+    timed_events = org_store.timed_events_for_day(today)
+    timeline_events, timeline_start_hour, timeline_end_hour, timeline_height_px, pixels_per_minute = build_day_timeline(timed_events)
+
+    now = datetime.now()
+    now_minutes = (now.hour - timeline_start_hour) * 60 + now.minute
+    timeline_total_minutes = max(1, (timeline_end_hour - timeline_start_hour) * 60)
+    now_visible = 0 <= now_minutes <= timeline_total_minutes
+    now_line_top_px = max(0, min(timeline_height_px, now_minutes * pixels_per_minute))
+
     return render_template("mainpage.html",
         name=name,
         time_bucket=current_time_bucket(),
-        title="Homepage"
+        title="Homepage",
+        today=today,
+        timed_events=timed_events,
+        timeline_events=timeline_events,
+        timeline_start_hour=timeline_start_hour,
+        timeline_end_hour=timeline_end_hour,
+        timeline_hour_lines=(timeline_end_hour - timeline_start_hour + 1),
+        timeline_height_px=timeline_height_px,
+        timeline_pixels_per_minute=pixels_per_minute,
+        now_visible=now_visible,
+        now_line_top_px=now_line_top_px,
+        now_time_label=now.strftime("%H:%M"),
     )
 
 @app.route("/style.css")

@@ -1,6 +1,7 @@
 import os
 import re
-from datetime import datetime, date, timedelta
+import hashlib
+from datetime import datetime, date, timedelta, time as dtime
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -30,7 +31,10 @@ _STATE_CHANGE_RE = re.compile(
     r'- State\s+"(\w+)"\s+from\s+"(\w+)"\s+\[(\d{4}-\d{2}-\d{2} \w+ \d{2}:\d{2})\]'
 )
 _ACTIVE_TS_RE = re.compile(
-    r'<(\d{4}-\d{2}-\d{2} \w+(?:\s+\d{2}:\d{2})?)(?:\s+[+.]{1,2}\d+\w)?>'
+    r'<(\d{4}-\d{2}-\d{2})[^>]*>'
+)
+_ACTIVE_TS_WITH_TIME_RE = re.compile(
+    r'<(\d{4}-\d{2}-\d{2})(?:\s+\w{3})?\s+(\d{1,2}:\d{2})(?:-(\d{1,2}:\d{2}))?[^>]*>'
 )
 _HEADING_TODO_RE = re.compile(r'^(?:\[#.\]\s+)?([A-Z][A-Z0-9-]*)(?:\s+|$)')
 
@@ -138,16 +142,34 @@ def _parse_state_changes(body: str) -> list:
     return changes
 
 
-def _parse_body_dates(body: str) -> list:
+def _parse_active_dates(text: str) -> list:
     dates = []
-    for m in _ACTIVE_TS_RE.finditer(body):
+    for m in _ACTIVE_TS_RE.finditer(text):
         raw = m.group(1).strip()
-        fmt = "%Y-%m-%d %a %H:%M" if ":" in raw else "%Y-%m-%d %a"
         try:
-            dates.append(datetime.strptime(raw, fmt))
+            dates.append(datetime.strptime(raw, "%Y-%m-%d"))
         except ValueError:
             pass
     return dates
+
+
+def _parse_timed_timestamps(text: str) -> list[tuple[date, dtime, Optional[dtime]]]:
+    """Extract <YYYY-MM-DD [Day] HH:MM[-HH:MM]> timestamps from text."""
+    parsed: list[tuple[date, dtime, Optional[dtime]]] = []
+    for match in _ACTIVE_TS_WITH_TIME_RE.finditer(text):
+        day_raw, start_raw, end_raw = match.groups()
+        try:
+            day = datetime.strptime(day_raw, "%Y-%m-%d").date()
+            start_t = datetime.strptime(start_raw, "%H:%M").time()
+            end_t = datetime.strptime(end_raw, "%H:%M").time() if end_raw else None
+            parsed.append((day, start_t, end_t))
+        except ValueError:
+            continue
+    return parsed
+
+
+def _strip_active_timestamps(text: str) -> str:
+    return re.sub(r'\s*<\d{4}-\d{2}-\d{2}[^>]*>', '', text).strip()
 
 
 def _to_date(value) -> Optional[date]:
@@ -167,11 +189,13 @@ def _to_date(value) -> Optional[date]:
 def _node_to_task(node) -> Optional[OrgTask]:
     scheduled = _to_date(node.scheduled)
     deadline  = _to_date(node.deadline)
-    body_dates = _parse_body_dates(node.body)
+    heading_dates = _parse_active_dates(node.heading)
+    body_dates = _parse_active_dates(node.body)
+    all_active_dates = heading_dates + body_dates
     inferred_todo, cleaned_heading = _extract_todo_from_heading(node.heading)
     resolved_todo = node.todo or inferred_todo
 
-    has_date = scheduled or deadline or body_dates
+    has_date = scheduled or deadline or all_active_dates
     if not resolved_todo and not has_date:
         return None
 
@@ -183,7 +207,7 @@ def _node_to_task(node) -> Optional[OrgTask]:
         deadline=deadline,
         properties=dict(node.properties),
         state_history=_parse_state_changes(node.body),
-        body_dates=body_dates,
+        body_dates=all_active_dates,
     )
 
 
@@ -196,20 +220,38 @@ def _parse_file(path: str) -> list[OrgTask]:
             tasks.append(task)
     return tasks
 
+
+def _file_digest(path: str) -> str:
+    """Stable content hash used for robust change detection."""
+    hasher = hashlib.blake2b(digest_size=16)
+    with open(path, "rb") as file:
+        while True:
+            chunk = file.read(1024 * 64)
+            if not chunk:
+                break
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
 @dataclass
 class _FileCache:
     path: str
-    mtime: float = 0.0
+    signature: tuple[int, int, int] | None = None
+    digest: str | None = None
     tasks: list = field(default_factory=list)
 
     def refresh_if_changed(self):
         try:
-            current_mtime = os.path.getmtime(self.path)
+            stat = os.stat(self.path)
         except FileNotFoundError:
             return
-        if current_mtime != self.mtime:
+
+        current_signature = (stat.st_mtime_ns, stat.st_size, stat.st_ino)
+        current_digest = _file_digest(self.path)
+
+        if current_signature != self.signature or current_digest != self.digest:
             self.tasks = _parse_file(self.path)
-            self.mtime = current_mtime
+            self.signature = current_signature
+            self.digest = current_digest
 
 
 class OrgStore:
@@ -268,6 +310,42 @@ class OrgStore:
 
         return entries
 
+    def timed_events_for_day(self, day: date) -> list[dict]:
+        """Return events with explicit time for one day, sorted by start time."""
+        self.refresh()
+        events: list[dict] = []
+        seen: set[tuple[str, str, str]] = set()
+
+        for task in self.all_tasks():
+            if task.is_done:
+                continue
+
+            text_sources = [task.heading]
+            for text in text_sources:
+                for event_day, start_t, end_t in _parse_timed_timestamps(text):
+                    if event_day != day:
+                        continue
+
+                    if end_t is None:
+                        end_dt = datetime.combine(day, start_t) + timedelta(minutes=30)
+                        end_t = end_dt.time()
+
+                    title = _strip_active_timestamps(task.heading)
+                    key = (title, start_t.isoformat(), end_t.isoformat())
+                    if key in seen:
+                        continue
+                    seen.add(key)
+
+                    events.append({
+                        "title": title,
+                        "start": start_t,
+                        "end": end_t,
+                        "todo": task.todo,
+                        "tags": list(task.tags),
+                    })
+
+        return sorted(events, key=lambda event: (event["start"], event["end"], event["title"]))
+
 def create_org_blueprint(store: OrgStore) -> Blueprint:
     bp = Blueprint("org", __name__, url_prefix="/org")
 
@@ -304,3 +382,4 @@ def attach_org(app, org_files: list[str]):
     store = OrgStore(org_files)
     bp    = create_org_blueprint(store)
     app.register_blueprint(bp)
+    return store
