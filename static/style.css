@@ -29,3 +29,134 @@ html {
   height: 100%;
   overflow-y: auto;
 }
+
+/* ---------------------------------------------------------------------------
+   Org calendar & task views
+--------------------------------------------------------------------------- */
+
+.org-empty {
+  color: var(--text-color);
+  opacity: 0.5;
+}
+
+/* Calendar: one block per day */
+.org-calendar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.org-day {
+  border-left: 3px solid #555;
+  padding-left: 0.75rem;
+}
+
+.org-day--today {
+  border-left-color: light-dark(#2a7a2a, #5faf5f);
+}
+
+.org-day--past {
+  opacity: 0.5;
+}
+
+.org-day-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.org-day-date {
+  font-weight: bold;
+}
+
+.org-day-badge {
+  font-size: 0.7em;
+  background: light-dark(#2a7a2a, #5faf5f);
+  color: #fff;
+  border-radius: 3px;
+  padding: 0 0.3em;
+}
+
+/* Task lists */
+.org-task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.org-task {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.org-task-state {
+  font-size: 0.72em;
+  font-weight: bold;
+  letter-spacing: 0.04em;
+  padding: 0 0.3em;
+  border-radius: 3px;
+  background: light-dark(#ddd, #333);
+}
+
+.org-task--todo    .org-task-state { background: light-dark(#ffd, #443); color: light-dark(#775500, #ccaa00); }
+.org-task--done    .org-task-state { background: light-dark(#dfd, #243); color: light-dark(#226622, #66bb66); }
+.org-task--waiting .org-task-state { background: light-dark(#def, #234); color: light-dark(#225577, #66aacc); }
+
+.org-task-heading {
+  flex: 1;
+}
+
+.org-task-date {
+  font-size: 0.8em;
+  opacity: 0.7;
+}
+
+.org-task-date--overdue {
+  color: light-dark(#aa2222, #ff6666);
+  opacity: 1;
+}
+
+.org-task-deadline {
+  font-size: 0.8em;
+  color: light-dark(#aa2222, #ff6666);
+}
+
+/* Entry kind accent — left micro-border on each task row */
+.org-entry--scheduled        { border-left: 2px solid light-dark(#4477aa, #6699cc); padding-left: 0.35rem; }
+.org-entry--scheduled-overdue{ border-left: 2px solid light-dark(#aa6600, #cc9933); padding-left: 0.35rem; }
+.org-entry--deadline         { border-left: 2px solid light-dark(#aa4400, #ff8855); padding-left: 0.35rem; }
+.org-entry--deadline-overdue { border-left: 2px solid light-dark(#aa2222, #ff4444); padding-left: 0.35rem; }
+.org-entry--appointment      { border-left: 2px solid light-dark(#448844, #66bb66); padding-left: 0.35rem; }
+
+/* Label (e.g. "Scheduled", "Deadline in 3d", "OVERDUE deadline") */
+.org-entry-label {
+  font-size: 0.72em;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+.org-entry--scheduled-overdue .org-entry-label,
+.org-entry--deadline-overdue  .org-entry-label {
+  color: light-dark(#aa2222, #ff6666);
+  opacity: 1;
+  font-weight: bold;
+}
+
+.org-task-tags {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.org-tag {
+  font-size: 0.7em;
+  background: light-dark(#eee, #2a2a2a);
+  border: 1px solid light-dark(#ccc, #444);
+  border-radius: 3px;
+  padding: 0 0.3em;
+}

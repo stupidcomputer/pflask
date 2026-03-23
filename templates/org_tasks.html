@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>All Tasks</h1>
+
+{% if not tasks %}
+  <p class="org-empty">No pending tasks.</p>
+{% else %}
+  <ul class="org-task-list org-task-list--flat">
+    {% for task in tasks | sort(attribute="next_date", reverse=False) %}
+      <li class="org-task org-task--{{ task.todo | lower }}">
+        <span class="org-task-state">{{ task.todo }}</span>
+        <span class="org-task-heading">{{ task.heading }}</span>
+        {% if task.next_date %}
+          <span class="org-task-date {% if task.next_date < today %}org-task-date--overdue{% endif %}">
+            {{ task.next_date.strftime("%a, %b %-d") }}
+          </span>
+        {% endif %}
+        {% if task.tags %}
+          <span class="org-task-tags">
+            {% for tag in task.tags %}
+              <span class="org-tag">{{ tag }}</span>
+            {% endfor %}
+          </span>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}

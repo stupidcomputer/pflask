@@ -5,6 +5,7 @@ pkgs.mkShell {
   buildInputs = [
     (pkgs.python311.withPackages (ps: with ps; [
       flask
+      orgparse
     ]))
   ];
 }

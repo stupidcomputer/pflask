@@ -11,7 +11,21 @@ from dataclasses import dataclass
 from typing import Callable, Any
 import json
 
+from org import attach_org
+
 app = Flask(__name__)
+
+# List your org files here
+attach_org(app, [
+    "/home/usr/org/main.org",
+    "/home/usr/org/body.org",
+    "/home/usr/org/inbox.org",
+    "/home/usr/org/agenda.org",
+    "/home/usr/org/pco.org",
+    "/home/usr/org/tfb.org",
+    "/home/usr/org/school-calendar.org",
+    "/home/usr/org/phone-inbox.org",
+])
 
 @dataclass
 class CachedSource:

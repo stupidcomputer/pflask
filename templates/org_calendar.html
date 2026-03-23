@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Agenda</h1>
+
+<div class="org-calendar">
+  {% for day_data in agenda_days %}
+    {% set day = day_data.day %}
+    {% set entries = day_data.entries %}
+    <div class="org-day {% if day == today %}org-day--today{% endif %}">
+      <div class="org-day-header">
+        <span class="org-day-date">{{ day.strftime("%A, %b %-d") }}</span>
+        {% if day == today %}<span class="org-day-badge">today</span>{% endif %}
+      </div>
+
+      {% if not entries %}
+        <p class="org-empty">No items.</p>
+      {% else %}
+        <ul class="org-task-list">
+          {% for entry in entries %}
+            {% set task = entry.task %}
+            <li class="org-task org-task--{{ (task.todo or 'none') | lower }} org-entry--{{ entry.kind }}">
+              {% if task.todo %}<span class="org-task-state">{{ task.todo }}</span>{% endif %}
+              <span class="org-entry-label">{{ entry.label }}</span>
+              <span class="org-task-heading">{{ task.heading }}</span>
+              {% if task.tags %}
+                <span class="org-task-tags">
+                  {% for tag in task.tags %}
+                    <span class="org-tag">{{ tag }}</span>
+                  {% endfor %}
+                </span>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}
