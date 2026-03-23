@@ -1,30 +1,38 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>All Tasks</h1>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">All Tasks</h1>
+</div>
 
-{% if not tasks %}
-  <p class="org-empty">No pending tasks.</p>
-{% else %}
-  <ul class="org-task-list org-task-list--flat">
-    {% for task in tasks | sort(attribute="next_date", reverse=False) %}
-      <li class="org-task org-task--{{ task.todo | lower }}">
-        <span class="org-task-state">{{ task.todo }}</span>
-        <span class="org-task-heading">{{ task.heading }}</span>
-        {% if task.next_date %}
-          <span class="org-task-date {% if task.next_date < today %}org-task-date--overdue{% endif %}">
-            {{ task.next_date.strftime("%a, %b %-d") }}
-          </span>
-        {% endif %}
-        {% if task.tags %}
-          <span class="org-task-tags">
-            {% for tag in task.tags %}
-              <span class="org-tag">{{ tag }}</span>
-            {% endfor %}
-          </span>
-        {% endif %}
-      </li>
-    {% endfor %}
-  </ul>
-{% endif %}
+<section class="card shadow-sm">
+  {% if not tasks %}
+    <div class="card-body">
+      <p class="text-body-secondary mb-0">No pending tasks.</p>
+    </div>
+  {% else %}
+    <ul class="list-group list-group-flush">
+      {% for task in tasks | sort(attribute="next_date", reverse=False) %}
+        <li class="list-group-item">
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            {% if task.todo %}<span class="badge rounded-pill text-bg-secondary">{{ task.todo }}</span>{% endif %}
+            <span class="fw-medium">{{ task.heading }}</span>
+            {% if task.next_date %}
+              <span class="badge rounded-pill {% if task.next_date < today %}text-bg-danger{% else %}text-bg-light border{% endif %}">
+                {{ task.next_date.strftime("%a, %b %-d") }}
+              </span>
+            {% endif %}
+            {% if task.tags %}
+              <span class="d-flex flex-wrap gap-1 ms-auto">
+                {% for tag in task.tags %}
+                  <span class="badge text-bg-light border">{{ tag }}</span>
+                {% endfor %}
+              </span>
+            {% endif %}
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</section>
 {% endblock %}

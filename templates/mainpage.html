@@ -1,5 +1,14 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>Good {{time_bucket}}, {{name}}!</h1>
+<div class="row justify-content-center">
+	<div class="col-12 col-lg-8">
+		<div class="card shadow-sm">
+			<div class="card-body">
+				<h1 class="h3 mb-3">Good {{ time_bucket }}, {{ name }}!</h1>
+				<p class="text-body-secondary mb-0">Your dashboard is ready.</p>
+			</div>
+		</div>
+	</div>
+</div>
 {% endblock %}

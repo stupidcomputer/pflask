@@ -1,40 +1,46 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>Agenda</h1>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Agenda</h1>
+</div>
 
-<div class="org-calendar">
+<div class="vstack gap-3">
   {% for day_data in agenda_days %}
     {% set day = day_data.day %}
     {% set entries = day_data.entries %}
-    <div class="org-day {% if day == today %}org-day--today{% endif %}">
-      <div class="org-day-header">
-        <span class="org-day-date">{{ day.strftime("%A, %b %-d") }}</span>
-        {% if day == today %}<span class="org-day-badge">today</span>{% endif %}
+    <section class="card shadow-sm {% if day == today %}border-primary{% endif %}">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">{{ day.strftime("%A, %b %-d") }}</span>
+        {% if day == today %}<span class="badge text-bg-primary">today</span>{% endif %}
       </div>
 
       {% if not entries %}
-        <p class="org-empty">No items.</p>
+        <div class="card-body">
+          <p class="text-body-secondary mb-0">No items.</p>
+        </div>
       {% else %}
-        <ul class="org-task-list">
+        <ul class="list-group list-group-flush">
           {% for entry in entries %}
             {% set task = entry.task %}
-            <li class="org-task org-task--{{ (task.todo or 'none') | lower }} org-entry--{{ entry.kind }}">
-              {% if task.todo %}<span class="org-task-state">{{ task.todo }}</span>{% endif %}
-              <span class="org-entry-label">{{ entry.label }}</span>
-              <span class="org-task-heading">{{ task.heading }}</span>
-              {% if task.tags %}
-                <span class="org-task-tags">
-                  {% for tag in task.tags %}
-                    <span class="org-tag">{{ tag }}</span>
-                  {% endfor %}
-                </span>
-              {% endif %}
+            <li class="list-group-item org-entry--{{ entry.kind }}">
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                {% if task.todo %}<span class="badge rounded-pill text-bg-secondary">{{ task.todo }}</span>{% endif %}
+                <span class="badge rounded-pill text-bg-light border">{{ entry.label }}</span>
+                <span class="fw-medium">{{ task.heading }}</span>
+                {% if task.tags %}
+                  <span class="d-flex flex-wrap gap-1 ms-auto">
+                    {% for tag in task.tags %}
+                      <span class="badge text-bg-light border">{{ tag }}</span>
+                    {% endfor %}
+                  </span>
+                {% endif %}
+              </div>
             </li>
           {% endfor %}
         </ul>
       {% endif %}
-    </div>
+    </section>
   {% endfor %}
 </div>
 {% endblock %}
